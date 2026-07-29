@@ -701,7 +701,7 @@ function renderBarber(){
     return `<div class="card pin-gate">
       <div class="eyebrow">Berber Girişi</div>
       <h2>PIN Kodunu Girin</h2>
-      <input type="text" id="pinInput" maxlength="4" placeholder="••••" inputmode="numeric">
+      <input type="text" id="pinInput" maxlength="6" placeholder="••••" inputmode="numeric" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
       <div id="pinErr" class="err-line"></div>
       <button class="btn" id="pinSubmit">Giriş Yap</button>
 
@@ -975,7 +975,8 @@ function attachHandlers(){
   if(pinSubmit){
     const pinInput = document.getElementById('pinInput');
     pinSubmit.addEventListener('click', ()=>{
-      if(pinInput.value === BARBER_PIN){
+      const enteredPin = pinInput.value.replace(/\D/g, '');
+      if(enteredPin === BARBER_PIN){
         barberUnlocked = true;
         ensureAudioContext();
         try{ localStorage.setItem('harunBerberAuth', '1'); }catch(e){}
