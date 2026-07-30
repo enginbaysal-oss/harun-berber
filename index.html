@@ -371,9 +371,6 @@ const SERVICES = [
   {id:'boya', name:'Saç Boyama'},
   {id:'cilt', name:'Cilt / Yüz Bakımı'}
 ];
-const WORK_START = '09:00';
-const WORK_END = '20:00';
-const SLOT_MIN = 30;
 const BARBER_PIN = '3353';
 const DAY_NAMES = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
 const MONTH_NAMES = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
@@ -398,9 +395,12 @@ let lastConfirmed = null;
 
 let barberSelectedDate = todayStr();
 let showManualForm = false;
+let showScheduleSettings = false;
 
 let audioCtx = null;
 let knownApptIds = null; // ilk yüklemeden sonra dolduğunda karşılaştırma için kullanılır
+
+let scheduleConfig = null; // {workStart, workEnd, slotMin, closedDates:[], blockedSlots:{date:[times]}, extraSlots:{date:[times]}}
 
 /* ---------------- Helpers ---------------- */
 function pad(n){return n<10?'0'+n:''+n;}
@@ -432,18 +432,35 @@ function generateDateRange(days){
   }
   return arr;
 }
-function generateSlots(){
+function defaultScheduleConfig(){
+  return {workStart:'09:00', workEnd:'20:00', slotMin:30, closedDates:[], blockedSlots:{}, extraSlots:{}};
+}
+function generateSlots(startStr, endStr, stepMin){
   const slots = [];
-  let [h,m] = WORK_START.split(':').map(Number);
-  const [eh,em] = WORK_END.split(':').map(Number);
+  let [h,m] = startStr.split(':').map(Number);
+  const [eh,em] = endStr.split(':').map(Number);
   while(h < eh || (h===eh && m < em)){
     slots.push(pad(h)+':'+pad(m));
-    m += SLOT_MIN;
+    m += stepMin;
     if(m>=60){m-=60;h++;}
   }
   return slots;
 }
-const ALL_SLOTS = generateSlots();
+function baseSlotsForConfig(){
+  const cfg = scheduleConfig || defaultScheduleConfig();
+  return generateSlots(cfg.workStart, cfg.workEnd, cfg.slotMin);
+}
+function isDateClosed(dateStr){
+  const cfg = scheduleConfig || defaultScheduleConfig();
+  return (cfg.closedDates||[]).includes(dateStr);
+}
+function getSlotsForDate(dateStr){
+  if(isDateClosed(dateStr)) return [];
+  const cfg = scheduleConfig || defaultScheduleConfig();
+  const base = baseSlotsForConfig().filter(t=>!((cfg.blockedSlots||{})[dateStr]||[]).includes(t));
+  const extra = ((cfg.extraSlots||{})[dateStr]||[]).filter(t=>!base.includes(t));
+  return [...base, ...extra].sort();
+}
 function serviceName(id){
   const s = SERVICES.find(x=>x.id===id);
   return s ? s.name : id;
@@ -509,6 +526,15 @@ async function fetchLatestStatus(){
     return shopStatus || {state:'bosta', updatedAt: Date.now()};
   }
 }
+async function fetchLatestSchedule(){
+  try{
+    const { data, error } = await supabase.from('app_state').select('data').eq('id','schedule').single();
+    if(error) throw error;
+    return Object.assign(defaultScheduleConfig(), (data && data.data) || {});
+  }catch(e){
+    return scheduleConfig || defaultScheduleConfig();
+  }
+}
 async function saveAppointments(){
   try{
     const { error } = await supabase.from('app_state').upsert({id:'appointments', data: appointmentsStore});
@@ -521,6 +547,15 @@ async function saveAppointments(){
 async function saveStatus(){
   try{
     const { error } = await supabase.from('app_state').upsert({id:'status', data: shopStatus});
+    if(error) throw error;
+    return true;
+  }catch(e){
+    return false;
+  }
+}
+async function saveSchedule(){
+  try{
+    const { error } = await supabase.from('app_state').upsert({id:'schedule', data: scheduleConfig});
     if(error) throw error;
     return true;
   }catch(e){
@@ -544,6 +579,7 @@ async function loadAll(){
     loadError = 'Randevular yüklenemedi. Supabase bağlantısını kontrol edin.';
   }
   shopStatus = await fetchLatestStatus();
+  scheduleConfig = await fetchLatestSchedule();
 }
 async function init(){
   try{
@@ -561,6 +597,7 @@ async function init(){
     // Müşteri bilgi formunu doldururken (adım 3) otomatik yenileme yapma,
     // aksi halde yazılan bilgiler ekran yenilenince silinir.
     if(view === 'customer' && custStep === 3 && !lastConfirmed) return;
+    if(view === 'barber' && showScheduleSettings) return;
     await loadAll();
     const newIds = collectApptIds(appointmentsStore);
     if(barberUnlocked){
@@ -637,9 +674,11 @@ function renderCustomer(){
     <div class="date-row">
       ${dates.map(d=>{
         const p = formatPill(d);
-        return `<div class="date-pill ${d===custSelectedDate?'selected':''}" data-date="${d}">
+        const closed = isDateClosed(d);
+        return `<div class="date-pill ${d===custSelectedDate?'selected':''}" data-date="${d}" ${closed?'style="opacity:0.5;"':''}>
           <div class="d">${p.top}</div>
           <div class="n">${p.num.split(' ')[0]}</div>
+          ${closed?'<div class="muted-small" style="font-size:9px;color:var(--danger);margin-top:2px;">KAPALI</div>':''}
         </div>`;
       }).join('')}
     </div>
@@ -648,18 +687,27 @@ function renderCustomer(){
   let timeHtml = '';
   if(custSelectedDate){
     const taken = takenTimesForDate(custSelectedDate);
-    timeHtml = `<div class="card">
-      <div class="eyebrow">Adım 2</div>
-      <h2>Saat Seçin</h2>
-      <div class="slot-grid">
-        ${ALL_SLOTS.map(t=>{
-          const isTaken = taken.includes(t);
-          const isPast = custSelectedDate === todayStr() && isPastTime(t);
-          const disabled = isTaken || isPast;
-          return `<div class="slot ${custSelectedTime===t?'selected':''} ${disabled?'taken':''}" ${disabled?'':`data-time="${t}"`}>${t}</div>`;
-        }).join('')}
-      </div>
-    </div>`;
+    const daySlots = getSlotsForDate(custSelectedDate);
+    if(isDateClosed(custSelectedDate)){
+      timeHtml = `<div class="card">
+        <div class="eyebrow">Adım 2</div>
+        <h2>Saat Seçin</h2>
+        <div class="empty-state">Bu tarihte berber randevu almıyor. Lütfen başka bir tarih seçin.</div>
+      </div>`;
+    } else {
+      timeHtml = `<div class="card">
+        <div class="eyebrow">Adım 2</div>
+        <h2>Saat Seçin</h2>
+        <div class="slot-grid">
+          ${daySlots.map(t=>{
+            const isTaken = taken.includes(t);
+            const isPast = custSelectedDate === todayStr() && isPastTime(t);
+            const disabled = isTaken || isPast;
+            return `<div class="slot ${custSelectedTime===t?'selected':''} ${disabled?'taken':''}" ${disabled?'':`data-time="${t}"`}>${t}</div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }
   }
 
   let formHtml = '';
@@ -746,18 +794,81 @@ function renderBarber(){
   const dateRow = `<div class="card">
     <div class="top-actions">
       <div class="eyebrow" style="margin-bottom:0;">Programı Görüntüle</div>
-      <button class="link-btn" id="refreshBtn">Yenile</button>
+      <div style="display:flex;gap:12px;align-items:center;">
+        <button class="link-btn" id="toggleScheduleBtn">${showScheduleSettings ? 'Ayarları Kapat' : '⚙ Çalışma Saatleri'}</button>
+        <button class="link-btn" id="refreshBtn">Yenile</button>
+      </div>
     </div>
     <div class="date-row">
       ${dates.map(d=>{
         const p = formatPill(d);
         const count = getDayAppts(d).filter(a=>a.status!=='cancelled').length;
-        return `<div class="date-pill ${d===barberSelectedDate?'selected':''}" data-bdate="${d}">
+        const closed = isDateClosed(d);
+        return `<div class="date-pill ${d===barberSelectedDate?'selected':''}" data-bdate="${d}" ${closed?'style="opacity:0.55;"':''}>
           <div class="d">${p.top}</div>
           <div class="n">${p.num.split(' ')[0]}</div>
-          ${count>0?`<div class="muted-small" style="font-size:10px;margin-top:2px;">${count} rdv</div>`:''}
+          ${closed?'<div class="muted-small" style="font-size:9px;color:var(--danger);margin-top:2px;">KAPALI</div>':(count>0?`<div class="muted-small" style="font-size:10px;margin-top:2px;">${count} rdv</div>`:'')}
         </div>`;
       }).join('')}
+    </div>
+  </div>`;
+
+  const cfg = scheduleConfig || defaultScheduleConfig();
+  const dateClosed = isDateClosed(barberSelectedDate);
+  const scheduleCard = !showScheduleSettings ? '' : `<div class="card">
+    <div class="eyebrow">Genel Çalışma Saatleri</div>
+    <h2 style="margin-top:0;">Varsayılan Ayarlar</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:110px;">
+        <label for="workStartInput">Başlangıç</label>
+        <input type="time" id="workStartInput" value="${cfg.workStart}">
+      </div>
+      <div style="flex:1;min-width:110px;">
+        <label for="workEndInput">Bitiş</label>
+        <input type="time" id="workEndInput" value="${cfg.workEnd}">
+      </div>
+      <div style="flex:1;min-width:110px;">
+        <label for="slotMinSelect">Randevu Aralığı</label>
+        <select id="slotMinSelect">
+          ${[15,20,30,45,60].map(v=>`<option value="${v}" ${cfg.slotMin===v?'selected':''}>${v} dk</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div id="scheduleErr" class="err-line"></div>
+    <button class="btn" id="saveScheduleBtn">Genel Ayarları Kaydet</button>
+
+    <div style="margin-top:22px;border-top:1px dashed var(--border);padding-top:14px;">
+      <h2 style="margin-top:0;">${formatPill(barberSelectedDate).top} · ${formatPill(barberSelectedDate).num} İçin Özel Ayar</h2>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13.5px;">
+        <input type="checkbox" id="closeDateToggle" ${dateClosed?'checked':''} style="width:auto;">
+        <span>Bu günü tamamen kapat (randevu alınamasın)</span>
+      </label>
+
+      ${!dateClosed ? `
+      <div style="margin-top:16px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Saatleri Aç/Kapat <span style="text-transform:none;color:var(--muted);">(tıklayarak değiştirin)</span></div>
+        <div class="slot-grid">
+          ${baseSlotsForConfig().map(t=>{
+            const blocked = ((cfg.blockedSlots||{})[barberSelectedDate]||[]).includes(t);
+            return `<div class="slot ${blocked?'taken':''}" data-toggle-slot="${t}" style="cursor:pointer;">${t}</div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <div class="eyebrow" style="margin-bottom:6px;">Ek Saat Ekle <span style="text-transform:none;color:var(--muted);">(normal saatler dışında)</span></div>
+        <div style="display:flex;gap:8px;">
+          <input type="time" id="extraSlotInput" style="flex:1;">
+          <button class="btn small ghost" id="addExtraSlotBtn" style="margin-top:0;">Ekle</button>
+        </div>
+        ${((cfg.extraSlots||{})[barberSelectedDate]||[]).length>0 ? `
+        <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+          ${((cfg.extraSlots||{})[barberSelectedDate]||[]).map(t=>`
+            <span class="badge active" style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;">${t}
+              <button data-remove-extra="${t}" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;padding:0;">✕</button>
+            </span>`).join('')}
+        </div>` : ''}
+      </div>
+      ` : `<div class="muted-small" style="margin-top:10px;">Bu gün kapalı olarak işaretli, müşteriler bu tarihi seçemeyecek.</div>`}
     </div>
   </div>`;
 
@@ -798,12 +909,12 @@ function renderBarber(){
     `).join('')}
   </div>`;
 
-  return statusCard + nextHtml + dateRow + reportCard + listHtml;
+  return statusCard + nextHtml + dateRow + scheduleCard + reportCard + listHtml;
 }
 
 function manualFormHtml(){
   const taken = takenTimesForDate(barberSelectedDate);
-  const free = ALL_SLOTS.filter(t=>!taken.includes(t));
+  const free = getSlotsForDate(barberSelectedDate).filter(t=>!taken.includes(t));
   return `<div class="manual-form">
     <label for="mName">Ad Soyad</label>
     <input type="text" id="mName" placeholder="Müşteri adı">
@@ -1039,6 +1150,92 @@ function attachHandlers(){
   if(downloadReportBtn){
     downloadReportBtn.addEventListener('click', ()=>downloadDailyReportTxt(barberSelectedDate));
   }
+  // Çalışma saatleri paneli aç/kapat
+  const toggleScheduleBtn = document.getElementById('toggleScheduleBtn');
+  if(toggleScheduleBtn){
+    toggleScheduleBtn.addEventListener('click', ()=>{
+      showScheduleSettings = !showScheduleSettings;
+      render();
+    });
+  }
+  // Genel çalışma saatlerini kaydet
+  const saveScheduleBtn = document.getElementById('saveScheduleBtn');
+  if(saveScheduleBtn){
+    saveScheduleBtn.addEventListener('click', async ()=>{
+      const ws = document.getElementById('workStartInput').value;
+      const we = document.getElementById('workEndInput').value;
+      const sm = Number(document.getElementById('slotMinSelect').value);
+      const errEl = document.getElementById('scheduleErr');
+      if(!ws || !we || ws >= we){
+        errEl.textContent = 'Lütfen geçerli bir başlangıç/bitiş saati girin (başlangıç bitişten önce olmalı).';
+        return;
+      }
+      scheduleConfig = Object.assign({}, scheduleConfig || defaultScheduleConfig(), {workStart: ws, workEnd: we, slotMin: sm});
+      const ok = await saveSchedule();
+      if(!ok){ errEl.textContent = 'Kaydedilemedi, tekrar deneyin.'; return; }
+      render();
+    });
+  }
+  // Günü tamamen kapat / aç
+  const closeDateToggle = document.getElementById('closeDateToggle');
+  if(closeDateToggle){
+    closeDateToggle.addEventListener('change', async ()=>{
+      scheduleConfig = scheduleConfig || defaultScheduleConfig();
+      scheduleConfig.closedDates = scheduleConfig.closedDates || [];
+      if(closeDateToggle.checked){
+        if(!scheduleConfig.closedDates.includes(barberSelectedDate)) scheduleConfig.closedDates.push(barberSelectedDate);
+      } else {
+        scheduleConfig.closedDates = scheduleConfig.closedDates.filter(d=>d!==barberSelectedDate);
+      }
+      await saveSchedule();
+      render();
+    });
+  }
+  // Tek tek saat engelle/aç
+  document.querySelectorAll('[data-toggle-slot]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const t = el.getAttribute('data-toggle-slot');
+      scheduleConfig = scheduleConfig || defaultScheduleConfig();
+      scheduleConfig.blockedSlots = scheduleConfig.blockedSlots || {};
+      const list = scheduleConfig.blockedSlots[barberSelectedDate] || [];
+      if(list.includes(t)){
+        scheduleConfig.blockedSlots[barberSelectedDate] = list.filter(x=>x!==t);
+      } else {
+        scheduleConfig.blockedSlots[barberSelectedDate] = [...list, t];
+      }
+      await saveSchedule();
+      render();
+    });
+  });
+  // Ek saat ekle
+  const addExtraSlotBtn = document.getElementById('addExtraSlotBtn');
+  if(addExtraSlotBtn){
+    addExtraSlotBtn.addEventListener('click', async ()=>{
+      const input = document.getElementById('extraSlotInput');
+      const t = input.value;
+      if(!t) return;
+      scheduleConfig = scheduleConfig || defaultScheduleConfig();
+      scheduleConfig.extraSlots = scheduleConfig.extraSlots || {};
+      const list = scheduleConfig.extraSlots[barberSelectedDate] || [];
+      if(!list.includes(t)){
+        scheduleConfig.extraSlots[barberSelectedDate] = [...list, t];
+        await saveSchedule();
+      }
+      render();
+    });
+  }
+  // Ek saat kaldır
+  document.querySelectorAll('[data-remove-extra]').forEach(el=>{
+    el.addEventListener('click', async ()=>{
+      const t = el.getAttribute('data-remove-extra');
+      scheduleConfig = scheduleConfig || defaultScheduleConfig();
+      scheduleConfig.extraSlots = scheduleConfig.extraSlots || {};
+      const list = scheduleConfig.extraSlots[barberSelectedDate] || [];
+      scheduleConfig.extraSlots[barberSelectedDate] = list.filter(x=>x!==t);
+      await saveSchedule();
+      render();
+    });
+  });
   // Manual submit
   const mSubmit = document.getElementById('mSubmit');
   if(mSubmit){
@@ -1063,8 +1260,15 @@ async function submitCustomerAppt(){
   if(!name || name.length < 2){ errEl.textContent = 'Lütfen ad soyad girin.'; return; }
   if(!phone || phone.replace(/\D/g,'').length < 10){ errEl.textContent = 'Lütfen geçerli bir telefon numarası girin.'; return; }
 
-  // re-check slot still free
+  // re-check slot still free (and schedule hasn't changed under us)
   appointmentsStore = await fetchLatestAppointments();
+  scheduleConfig = await fetchLatestSchedule();
+  if(isDateClosed(custSelectedDate) || !getSlotsForDate(custSelectedDate).includes(custSelectedTime)){
+    errEl.textContent = 'Bu saat artık uygun değil, lütfen başka bir saat seçin.';
+    custSelectedTime = null;
+    render();
+    return;
+  }
   const taken = takenTimesForDate(custSelectedDate);
   if(taken.includes(custSelectedTime)){
     errEl.textContent = 'Bu saat az önce doldu, lütfen başka bir saat seçin.';
