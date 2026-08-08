@@ -3,875 +3,845 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Usta Berber — Randevu</title>
+<title>Portföy Sesli Asistan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-
   :root{
-    --bg: #161310;
-    --panel: #1F1B16;
-    --panel-2: #262019;
-    --cream: #F1E8D6;
-    --muted: #9C9182;
-    --navy: #2B3B54;
-    --red: #9C2B2B;
-    --red-light: #C24A4A;
-    --gold: #C9A227;
-    --gold-light: #E4C356;
-    --line: #38312A;
-    --ok: #4C8C5B;
+    --bg:#14161a;
+    --surface:#1e2126;
+    --surface-2:#262a31;
+    --brass:#c9a15a;
+    --brass-soft:rgba(201,161,90,0.16);
+    --text:#ededea;
+    --text-muted:#8b9099;
+    --success:#6fae8c;
+    --danger:#c9705a;
+    --border:#33373e;
   }
-
   *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
+  html,body{margin:0;padding:0;background:var(--bg);}
   body{
-    background:var(--bg);
-    color:var(--cream);
     font-family:'Inter',sans-serif;
-    min-height:100vh;
-    -webkit-tap-highlight-color:transparent;
-  }
-
-  .pole-bar{
-    height:8px;
-    width:100%;
-    background:repeating-linear-gradient(115deg,
-      var(--red) 0 18px,
-      var(--cream) 18px 36px,
-      var(--navy) 36px 54px);
-    background-size:200% 100%;
-    animation:pole-scroll 6s linear infinite;
-  }
-  @keyframes pole-scroll{
-    from{background-position:0 0;}
-    to{background-position:-108px 0;}
-  }
-  @media (prefers-reduced-motion: reduce){
-    .pole-bar{animation:none;}
-  }
-
-  header{
-    padding:28px 20px 20px;
-    text-align:center;
-    border-bottom:1px solid var(--line);
-  }
-  .brand{
-    font-family:'Bebas Neue',sans-serif;
-    font-size:clamp(36px,8vw,54px);
-    letter-spacing:2px;
-    color:var(--cream);
-    margin:0;
-    line-height:1;
-  }
-  .brand span{color:var(--gold-light);}
-  .tagline{
-    color:var(--muted);
-    font-size:13px;
-    letter-spacing:3px;
-    text-transform:uppercase;
-    margin:6px 0 0;
-  }
-
-  .container{max-width:640px;margin:0 auto;padding:20px 16px 60px;}
-
-  .nav-toggle{
+    color:var(--text);
     display:flex;
-    gap:8px;
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:12px;
-    padding:5px;
-    margin-bottom:24px;
+    justify-content:center;
+    min-height:100vh;
   }
-  .nav-toggle button{
-    flex:1;
-    padding:12px 10px;
-    background:transparent;
-    border:none;
-    border-radius:9px;
-    color:var(--muted);
-    font-family:'Inter',sans-serif;
+  #app{
+    width:100%;
+    max-width:480px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(circle at 20% -10%, rgba(201,161,90,0.08), transparent 45%),
+      var(--bg);
+  }
+  header{
+    padding:22px 20px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    border-bottom:1px solid var(--border);
+  }
+  .logo{
+    width:34px;height:34px;flex:none;
+    border-radius:8px;
+    background:var(--brass-soft);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .logo svg{width:18px;height:18px;}
+  header h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:17px;
     font-weight:600;
-    font-size:14px;
-    cursor:pointer;
-    transition:all .15s ease;
+    letter-spacing:-0.01em;
+    margin:0;
   }
-  .nav-toggle button.active{
-    background:var(--gold);
-    color:#241C08;
+  header p{
+    margin:1px 0 0;
+    font-size:11.5px;
+    color:var(--text-muted);
   }
 
-  .card{
-    background:var(--panel);
-    border:1px solid var(--line);
-    border-radius:14px;
-    padding:20px;
+  nav.tabs{
+    display:flex;
+    gap:6px;
+    padding:12px 16px;
+    border-bottom:1px solid var(--border);
+  }
+  nav.tabs button{
+    flex:1;
+    padding:9px 8px;
+    border-radius:8px;
+    border:1px solid transparent;
+    background:transparent;
+    color:var(--text-muted);
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  nav.tabs button.active{
+    background:var(--surface-2);
+    color:var(--brass);
+    border-color:var(--border);
+  }
+  nav.tabs button:focus-visible{outline:2px solid var(--brass);outline-offset:1px;}
+
+  main{flex:1;padding:20px 18px 40px;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* --- Sesli arama --- */
+  .mic-zone{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:18px 0 10px;
+  }
+  .mic-wrap{position:relative;width:120px;height:120px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+  .ring{
+    position:absolute;border-radius:50%;
+    border:1px solid var(--brass);
+    opacity:0;
+  }
+  .mic-wrap.listening .ring{animation:sonar 2.2s ease-out infinite;}
+  .mic-wrap.listening .ring:nth-child(2){animation-delay:.6s;}
+  .mic-wrap.listening .ring:nth-child(3){animation-delay:1.2s;}
+  @keyframes sonar{
+    0%{width:64px;height:64px;opacity:.6;}
+    100%{width:130px;height:130px;opacity:0;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .mic-wrap.listening .ring{animation:none;opacity:.25;width:100px;height:100px;}
+  }
+  #micBtn{
+    width:64px;height:64px;border-radius:50%;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    color:var(--brass);
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    z-index:1;
+    transition:background .15s, transform .1s;
+  }
+  #micBtn:hover{background:#2c313a;}
+  #micBtn:active{transform:scale(.96);}
+  #micBtn.listening{background:var(--brass);color:var(--bg);}
+  #micBtn svg{width:26px;height:26px;}
+
+  .transcript{
+    min-height:20px;
+    text-align:center;
+    font-size:14px;
+    color:var(--text-muted);
+    padding:0 10px;
+    margin-bottom:6px;
+  }
+  .transcript.has-text{color:var(--text);}
+  .hint{
+    text-align:center;
+    font-size:11.5px;
+    color:var(--text-muted);
     margin-bottom:18px;
   }
-  .section-title{
-    font-family:'Bebas Neue',sans-serif;
-    font-size:22px;
-    letter-spacing:1px;
-    color:var(--gold-light);
-    margin:0 0 14px;
+
+  .search-fallback{
+    display:flex;
+    gap:8px;
+    margin-bottom:22px;
+  }
+  .search-fallback input{
+    flex:1;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:10px 12px;
+    color:var(--text);
+    font-size:13.5px;
+    font-family:'Inter',sans-serif;
+  }
+  .search-fallback input:focus{outline:2px solid var(--brass);outline-offset:0;}
+  .search-fallback button{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--brass);
+    border-radius:9px;
+    padding:0 16px;
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+  }
+
+  .results-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--text-muted);
+    margin:4px 2px 10px;
+  }
+
+  /* --- Key-tag style listing card --- */
+  .tag-card{
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-left:2px dashed var(--border);
+    border-radius:10px;
+    padding:16px 16px 14px 22px;
+    margin-bottom:14px;
+  }
+  .tag-hole{
+    position:absolute;
+    left:-1px; top:18px;
+    width:14px;height:14px;
+    border-radius:50%;
+    background:var(--bg);
+    border:1px solid var(--border);
+  }
+  .tag-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+    margin-bottom:8px;
+  }
+  .tag-title{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:15px;
+    font-weight:600;
+    line-height:1.3;
+  }
+  .tag-price{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:14px;
+    font-weight:600;
+    color:var(--brass);
+    white-space:nowrap;
+  }
+  .tag-location{
+    font-size:12.5px;
+    color:var(--text-muted);
+    margin-bottom:10px;
     display:flex;
     align-items:center;
-    gap:10px;
+    gap:5px;
   }
-  .section-title .num{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    width:26px;height:26px;
-    border-radius:50%;
-    background:var(--red);
-    color:var(--cream);
-    font-family:'Inter',sans-serif;
-    font-size:13px;
-    font-weight:700;
+  .tag-location svg{width:12px;height:12px;flex:none;opacity:.8;}
+  .tag-meta{
+    display:flex;
+    gap:14px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    color:var(--text-muted);
+    margin-bottom:10px;
   }
-
-  .service-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(135px,1fr));
-    gap:10px;
+  .tag-features{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:12px;
   }
-  .service-card{
-    background:var(--panel-2);
-    border:1px solid var(--line);
-    border-radius:10px;
-    padding:14px 12px;
-    cursor:pointer;
-    text-align:left;
-    transition:all .12s ease;
-    color:var(--cream);
+  .chip{
+    background:var(--brass-soft);
+    color:var(--brass);
+    border-radius:20px;
+    padding:3px 10px;
+    font-size:11px;
+    font-weight:500;
   }
-  .service-card:hover{border-color:var(--gold);}
-  .service-card.selected{
-    border-color:var(--gold);
-    background:rgba(201,162,39,0.12);
-  }
-  .service-card .icon{font-size:22px;display:block;margin-bottom:6px;}
-  .service-card .name{font-weight:600;font-size:14px;display:block;}
-  .service-card .dur{color:var(--muted);font-size:12px;font-family:'Space Mono',monospace;}
-
-  label{
-    display:block;
+  .tag-actions{display:flex;gap:8px;}
+  .tag-actions a, .tag-actions button{
+    flex:1;
+    text-align:center;
+    padding:8px 10px;
+    border-radius:8px;
     font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:1px;
-    color:var(--muted);
-    margin:14px 0 6px;
+    font-weight:600;
+    text-decoration:none;
+    cursor:pointer;
+    border:1px solid var(--border);
   }
-  input[type=text], input[type=tel], input[type=date]{
-    width:100%;
-    background:var(--panel-2);
-    border:1px solid var(--line);
-    color:var(--cream);
-    padding:12px 14px;
-    border-radius:9px;
-    font-size:15px;
-    font-family:'Inter',sans-serif;
-  }
-  input:focus{outline:none;border-color:var(--gold);}
-  input::placeholder{color:#6B6255;}
+  .btn-link{background:var(--brass);color:var(--bg);border-color:var(--brass);}
+  .btn-edit{background:transparent;color:var(--text-muted);}
+  .btn-delete{background:transparent;color:var(--danger);}
 
-  .slot-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(72px,1fr));
-    gap:8px;
+  .empty{
+    text-align:center;
+    color:var(--text-muted);
+    font-size:13px;
+    padding:30px 10px;
+  }
+
+  /* --- Form --- */
+  form label{
+    display:block;
+    font-size:11.5px;
+    color:var(--text-muted);
+    margin:0 0 5px 2px;
+  }
+  form .field{margin-bottom:14px;}
+  form input, form textarea{
+    width:100%;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:10px 12px;
+    color:var(--text);
+    font-size:13.5px;
+    font-family:'Inter',sans-serif;
+    resize:none;
+  }
+  form input:focus, form textarea:focus{outline:2px solid var(--brass);outline-offset:0;}
+  .row2{display:flex;gap:10px;}
+  .row2 .field{flex:1;}
+  .submit-btn{
+    width:100%;
+    background:var(--brass);
+    color:var(--bg);
+    border:none;
+    border-radius:9px;
+    padding:12px;
+    font-weight:700;
+    font-size:13.5px;
+    cursor:pointer;
     margin-top:4px;
   }
-  .slot{
-    background:var(--panel-2);
-    border:1px solid var(--line);
-    color:var(--cream);
-    padding:10px 4px;
-    border-radius:8px;
-    font-family:'Space Mono',monospace;
-    font-size:13px;
-    text-align:center;
-    cursor:pointer;
-  }
-  .slot:hover{border-color:var(--gold);}
-  .slot.selected{background:var(--gold);color:#241C08;border-color:var(--gold);font-weight:700;}
-  .slot.taken{opacity:0.25;cursor:not-allowed;text-decoration:line-through;}
-  .empty-note{color:var(--muted);font-size:13px;padding:10px 0;}
-
-  .btn{
+  .cancel-edit{
     width:100%;
-    padding:15px;
-    border-radius:10px;
-    border:none;
-    font-family:'Inter',sans-serif;
-    font-weight:700;
-    font-size:15px;
-    cursor:pointer;
-    margin-top:18px;
-    transition:transform .08s ease, opacity .15s ease;
-  }
-  .btn:active{transform:scale(0.98);}
-  .btn-primary{
-    background:repeating-linear-gradient(115deg,var(--red) 0 14px, var(--red-light) 14px 28px);
-    color:var(--cream);
-  }
-  .btn-primary:disabled{opacity:0.35;cursor:not-allowed;}
-  .btn-secondary{
-    background:var(--panel-2);
-    border:1px solid var(--line);
-    color:var(--cream);
-  }
-  .btn-ghost{
     background:transparent;
-    border:1px solid var(--line);
-    color:var(--muted);
-    padding:8px 14px;
-    width:auto;
-    margin:0;
+    color:var(--text-muted);
+    border:1px solid var(--border);
+    border-radius:9px;
+    padding:10px;
+    font-size:12.5px;
+    cursor:pointer;
+    margin-top:8px;
+  }
+  .toast{
+    position:fixed;
+    bottom:18px;left:50%;transform:translateX(-50%);
+    background:var(--surface-2);
+    border:1px solid var(--brass);
+    color:var(--text);
+    padding:10px 18px;
+    border-radius:20px;
+    font-size:12.5px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s;
+    max-width:90%;
+    text-align:center;
+  }
+  .toast.show{opacity:1;}
+  .warn-box{
+    background:rgba(201,112,90,0.1);
+    border:1px solid rgba(201,112,90,0.4);
+    color:#e0a596;
+    font-size:11.5px;
+    padding:9px 12px;
     border-radius:8px;
-    font-size:13px;
-    font-weight:600;
-    cursor:pointer;
+    margin-bottom:16px;
+    text-align:center;
   }
-
-  .success-box{text-align:center;padding:30px 10px;}
-  .success-box .check{font-size:44px;color:var(--gold-light);margin-bottom:10px;}
-  .success-box h3{font-family:'Bebas Neue';font-size:26px;letter-spacing:1px;margin:0 0 10px;color:var(--cream);}
-  .summary-row{
-    display:flex;justify-content:space-between;
-    padding:8px 0;border-bottom:1px solid var(--line);
-    font-size:14px;
-  }
-  .summary-row:last-child{border-bottom:none;}
-  .summary-row .k{color:var(--muted);}
-
-  .pin-box{max-width:280px;margin:40px auto;text-align:center;}
-  .pin-box input{text-align:center;letter-spacing:6px;font-size:20px;font-family:'Space Mono',monospace;}
-
-  .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
-  .status-card{
-    background:var(--panel-2);border:1px solid var(--line);border-radius:12px;
-    padding:14px;
-  }
-  .status-card .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;}
-  .status-card .val{font-family:'Bebas Neue';font-size:20px;color:var(--gold-light);line-height:1.2;}
-  .status-card .sub{font-size:12px;color:var(--muted);margin-top:2px;}
-
-  .date-nav{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
-  .date-nav button{
-    background:var(--panel-2);border:1px solid var(--line);color:var(--cream);
-    width:38px;height:38px;border-radius:8px;font-size:16px;cursor:pointer;
-  }
-  .date-nav input{flex:1;}
-
-  .appt-row{
-    display:flex;gap:12px;align-items:center;
-    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
-    padding:12px 14px;margin-bottom:8px;
-  }
-  .appt-time{
-    font-family:'Space Mono',monospace;font-weight:700;font-size:15px;
-    color:var(--gold-light);min-width:52px;
-  }
-  .appt-info{flex:1;min-width:0;}
-  .appt-name{font-weight:600;font-size:14px;}
-  .appt-meta{font-size:12px;color:var(--muted);margin-top:2px;}
-  .badge{
-    font-size:10px;text-transform:uppercase;letter-spacing:0.5px;
-    padding:3px 8px;border-radius:20px;font-weight:700;
-  }
-  .badge.bekliyor{background:rgba(201,162,39,0.18);color:var(--gold-light);}
-  .badge.tamamlandi{background:rgba(76,140,91,0.2);color:#7FC08D;}
-  .badge.iptal{background:rgba(156,43,43,0.2);color:var(--red-light);}
-  .appt-actions{display:flex;gap:6px;}
-  .icon-btn{
-    background:transparent;border:1px solid var(--line);color:var(--muted);
-    width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:13px;
-  }
-  .icon-btn:hover{border-color:var(--gold);color:var(--gold-light);}
-
-  .empty-list{text-align:center;color:var(--muted);padding:30px 0;font-size:14px;}
-
-  .toggle-add{
-    display:flex;align-items:center;justify-content:space-between;
-    cursor:pointer;
-  }
-  .refresh-line{
-    display:flex;justify-content:space-between;align-items:center;
-    font-size:11px;color:var(--muted);margin-bottom:14px;
-  }
-
-  .hidden{display:none !important;}
 </style>
 </head>
 <body>
+<div id="app">
 
-<div class="pole-bar"></div>
-<header>
-  <h1 class="brand">USTA <span>BERBER</span></h1>
-  <p class="tagline">Randevu Sistemi</p>
-</header>
-
-<div class="container">
-
-  <div class="nav-toggle">
-    <button id="tabCustomer" class="active">Randevu Al</button>
-    <button id="tabBarber">Berber Paneli</button>
-  </div>
-
-  <!-- CUSTOMER VIEW -->
-  <div id="viewCustomer">
-
-    <div id="bookingForm">
-      <div class="card">
-        <p class="section-title"><span class="num">1</span>Hizmet Seç</p>
-        <div class="service-grid" id="serviceGrid"></div>
-      </div>
-
-      <div class="card">
-        <p class="section-title"><span class="num">2</span>Tarih ve Saat</p>
-        <label>Tarih</label>
-        <input type="date" id="dateInput">
-        <label>Müsait Saatler</label>
-        <div class="slot-grid" id="slotGrid"></div>
-      </div>
-
-      <div class="card">
-        <p class="section-title"><span class="num">3</span>Bilgileriniz</p>
-        <label>Ad Soyad</label>
-        <input type="text" id="custName" placeholder="Ahmet Yılmaz">
-        <label>Telefon</label>
-        <input type="tel" id="custPhone" placeholder="05XX XXX XX XX">
-        <button class="btn btn-primary" id="submitBtn" disabled>Randevu Oluştur</button>
-      </div>
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#c9a15a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
     </div>
-
-    <div id="successView" class="card hidden">
-      <div class="success-box">
-        <div class="check">✓</div>
-        <h3>Randevunuz Alındı</h3>
-      </div>
-      <div id="summaryBox"></div>
-      <button class="btn btn-secondary" id="newBookingBtn">Yeni Randevu Oluştur</button>
+    <div>
+      <h1>Portföy Sesli Asistan</h1>
+      <p>Sesle söyle, portföyünü bul</p>
     </div>
+  </header>
 
-  </div>
+  <nav class="tabs">
+    <button class="tab-btn active" data-view="search">Sesli Ara</button>
+    <button class="tab-btn" data-view="add">Portföy Ekle</button>
+    <button class="tab-btn" data-view="list">Portföyüm</button>
+  </nav>
 
-  <!-- BARBER VIEW -->
-  <div id="viewBarber" class="hidden">
+  <main>
 
-    <div id="pinGate" class="pin-box">
-      <p class="section-title" style="justify-content:center;">Berber Girişi</p>
-      <input type="text" id="pinInput" placeholder="PIN" maxlength="6">
-      <button class="btn btn-primary" id="pinSubmit">Giriş Yap</button>
-      <p style="color:var(--muted);font-size:12px;margin-top:12px;">Varsayılan PIN: 4545</p>
-    </div>
+    <!-- SESLİ ARAMA -->
+    <section class="view active" id="view-search">
+      <div id="voiceWarn" class="warn-box" style="display:none;"></div>
 
-    <div id="barberPanel" class="hidden">
-
-      <div class="refresh-line">
-        <span id="lastUpdated">—</span>
-        <button class="btn-ghost" id="refreshBtn">Yenile</button>
+      <div class="mic-zone">
+        <div class="mic-wrap" id="micWrap">
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <button id="micBtn" aria-label="Sesli aramayı başlat">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+        </div>
+        <div class="transcript" id="transcript">Mikrofona dokunup portföyü tarif edin</div>
+        <div class="hint">Örn: "Bahçelievler 3+1 asansörlü daire"</div>
       </div>
 
-      <div class="status-grid">
-        <div class="status-card">
-          <div class="lbl">Şu An</div>
-          <div class="val" id="nowVal">—</div>
-          <div class="sub" id="nowSub"></div>
-        </div>
-        <div class="status-card">
-          <div class="lbl">Sıradaki</div>
-          <div class="val" id="nextVal">—</div>
-          <div class="sub" id="nextSub"></div>
-        </div>
+      <div class="search-fallback">
+        <input type="text" id="textSearch" placeholder="ya da yazarak arayın...">
+        <button id="textSearchBtn">Ara</button>
       </div>
 
-      <div class="card">
-        <div class="date-nav">
-          <button id="prevDay">‹</button>
-          <input type="date" id="barberDate">
-          <button id="nextDay">›</button>
+      <div id="resultsLabel" class="results-label" style="display:none;"></div>
+      <div id="results"></div>
+    </section>
+
+    <!-- PORTFÖY EKLE -->
+    <section class="view" id="view-add">
+      <form id="listingForm">
+        <div class="field">
+          <label for="f-title">İlan başlığı</label>
+          <input id="f-title" placeholder="Örn: Bahçelievler'de Satılık 3+1 Daire">
         </div>
-
-        <div class="toggle-add" id="quickAddToggle">
-          <p class="section-title" style="margin:0;">Hızlı Randevu Ekle</p>
-          <span id="quickAddArrow" style="color:var(--muted);">▾</span>
+        <div class="row2">
+          <div class="field">
+            <label for="f-price">Fiyat (TL)</label>
+            <input id="f-price" type="number" min="0" placeholder="2500000">
+          </div>
+          <div class="field">
+            <label for="f-rooms">Oda sayısı</label>
+            <input id="f-rooms" placeholder="3+1">
+          </div>
         </div>
-
-        <div id="quickAddBody" class="hidden" style="margin-top:12px;">
-          <label>Ad Soyad</label>
-          <input type="text" id="qaName" placeholder="Müşteri adı">
-          <label>Telefon</label>
-          <input type="tel" id="qaPhone" placeholder="05XX XXX XX XX">
-          <label>Hizmet</label>
-          <div class="service-grid" id="qaServiceGrid"></div>
-          <label>Saat</label>
-          <div class="slot-grid" id="qaSlotGrid"></div>
-          <button class="btn btn-primary" id="qaSubmit" disabled>Randevuyu Ekle</button>
+        <div class="row2">
+          <div class="field">
+            <label for="f-area">Metrekare</label>
+            <input id="f-area" type="number" min="0" placeholder="120">
+          </div>
+          <div class="field">
+            <label for="f-location">Konum / Mahalle</label>
+            <input id="f-location" placeholder="Bahçelievler, İstanbul">
+          </div>
         </div>
-      </div>
+        <div class="field">
+          <label for="f-features">Özellikler <span style="opacity:.6;">(virgülle ayırın)</span></label>
+          <input id="f-features" placeholder="Asansör, Otopark, Balkon, Eşyalı">
+        </div>
+        <div class="field">
+          <label for="f-link">İlan linki</label>
+          <input id="f-link" type="url" placeholder="https://...">
+        </div>
+        <button type="submit" class="submit-btn" id="submitBtn">Portföye Ekle</button>
+        <button type="button" class="cancel-edit" id="cancelEdit" style="display:none;">Düzenlemeyi iptal et</button>
+      </form>
+    </section>
 
-      <div class="card">
-        <p class="section-title">Randevu Listesi</p>
-        <div id="apptList"></div>
-      </div>
+    <!-- PORTFÖYÜM -->
+    <section class="view" id="view-list">
+      <div id="resultsLabelAll" class="results-label"></div>
+      <div id="allListings"></div>
+    </section>
 
-    </div>
-  </div>
-
+  </main>
 </div>
 
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
 <script>
-const OPEN_HOUR = 9;
-const CLOSE_HOUR = 20;
-const SLOT_MINUTES = 30;
-const BARBER_PIN = "4545";
-const STORAGE_KEY = "appointments";
+(function(){
+  const STORAGE_KEY = 'portfolio-listings';
+  let listings = [];
+  let editingId = null;
 
-const SERVICES = [
-  {id:"sac", name:"Saç Kesimi", dur:30, icon:"✂️"},
-  {id:"sakal", name:"Sakal Tıraşı", dur:20, icon:"🪒"},
-  {id:"sacsakal", name:"Saç + Sakal", dur:45, icon:"💈"},
-  {id:"cocuk", name:"Çocuk Kesimi", dur:30, icon:"👦"},
-  {id:"cilt", name:"Cilt Bakımı", dur:30, icon:"🧴"}
-];
+  // ---------- BULUT SENKRONU (Firebase) ----------
+  // Kendi ücretsiz Firebase projenizin bilgilerini buraya yapıştırın
+  // (Firebase Console > Project settings > SDK setup and configuration).
+  // Boş/varsayılan bırakılırsa uygulama sadece bu tarayıcıda çalışır, senkron olmaz.
+  const firebaseConfig = {
+    apiKey: "AIzaSyBbLAjj7BkVKpVWtap90ZLszMvpBQsD39Y",
+    authDomain: "sesliaraportfoy.firebaseapp.com",
+    databaseURL: "https://sesliaraportfoy-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "sesliaraportfoy",
+    storageBucket: "sesliaraportfoy.firebasestorage.app",
+    messagingSenderId: "756529793201",
+    appId: "1:756529793201:web:cd77ae8b393bf211893a90"
+  };
 
-let state = {
-  customer: { service:null, date:null, time:null },
-  quickAdd: { service:null, time:null },
-  barberDate: null,
-  authed: false
-};
-
-function pad(n){ return n.toString().padStart(2,"0"); }
-function todayStr(){
-  const d = new Date();
-  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-}
-function nowMinutes(){
-  const d = new Date();
-  return d.getHours()*60 + d.getMinutes();
-}
-function timeToMinutes(t){
-  const [h,m] = t.split(":").map(Number);
-  return h*60+m;
-}
-function serviceName(id){
-  const s = SERVICES.find(s=>s.id===id);
-  return s ? s.name : id;
-}
-function serviceDur(id){
-  const s = SERVICES.find(s=>s.id===id);
-  return s ? s.dur : 30;
-}
-function fmtDate(dateStr){
-  const d = new Date(dateStr+"T00:00:00");
-  return d.toLocaleDateString("tr-TR",{day:"numeric",month:"long",weekday:"long"});
-}
-
-function generateSlots(dateStr){
-  const slots = [];
-  for(let m = OPEN_HOUR*60; m < CLOSE_HOUR*60; m += SLOT_MINUTES){
-    slots.push(pad(Math.floor(m/60))+":"+pad(m%60));
-  }
-  if(dateStr === todayStr()){
-    const nm = nowMinutes();
-    return slots.filter(s => timeToMinutes(s) > nm);
-  }
-  return slots;
-}
-
-async function loadAppointments(){
+  let db = null;
+  let useCloud = false;
   try{
-    const res = await window.storage.get(STORAGE_KEY, true);
-    if(!res || !res.value) return [];
-    return JSON.parse(res.value);
-  }catch(e){
-    return [];
-  }
-}
-async function saveAppointments(list){
-  try{
-    await window.storage.set(STORAGE_KEY, JSON.stringify(list), true);
-  }catch(e){
-    console.error("Kaydetme hatası", e);
-  }
-}
-function newId(){
-  return Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
-}
-
-function renderServiceGrid(container, selectedId, onSelect){
-  container.innerHTML = "";
-  SERVICES.forEach(s=>{
-    const btn = document.createElement("button");
-    btn.className = "service-card" + (selectedId===s.id ? " selected":"");
-    btn.innerHTML = `<span class="icon">${s.icon}</span><span class="name">${s.name}</span><span class="dur">${s.dur} dk</span>`;
-    btn.onclick = ()=> onSelect(s.id);
-    container.appendChild(btn);
-  });
-}
-
-function makeServiceSelector(containerId, getSelected, setSelected, afterFn){
-  function render(){
-    renderServiceGrid(document.getElementById(containerId), getSelected(), (id)=>{
-      setSelected(id);
-      render();
-      if(afterFn) afterFn();
-    });
-  }
-  render();
-}
-
-async function renderSlotGrid(container, dateStr, selectedTime, onSelect){
-  container.innerHTML = "<div class='empty-note'>Yükleniyor...</div>";
-  const all = await loadAppointments();
-  const booked = new Set(all.filter(a=>a.date===dateStr && a.status!=="iptal").map(a=>a.time));
-  const slots = generateSlots(dateStr);
-  container.innerHTML = "";
-  if(slots.length===0){
-    container.innerHTML = "<div class='empty-note'>Bu tarih için müsait saat yok.</div>";
-    return;
-  }
-  slots.forEach(t=>{
-    const btn = document.createElement("button");
-    const taken = booked.has(t);
-    btn.className = "slot" + (t===selectedTime ? " selected":"") + (taken ? " taken":"");
-    btn.textContent = t;
-    if(taken){
-      btn.disabled = true;
-    }else{
-      btn.onclick = ()=> onSelect(t);
+    if(window.firebase && firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf('BURAYA')===-1){
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      useCloud = true;
     }
-    container.appendChild(btn);
-  });
-}
+  }catch(e){ console.warn('Bulut bağlantısı kurulamadı, yerel depoya geçildi:', e); }
 
-function validateCustomerForm(){
-  const name = document.getElementById("custName").value.trim();
-  const phone = document.getElementById("custPhone").value.trim();
-  const ok = state.customer.service && state.customer.date && state.customer.time && name.length>1 && phone.length>=7;
-  document.getElementById("submitBtn").disabled = !ok;
-}
+  // ---------- Yerel depolama (window.storage -> localStorage -> hafıza) ----------
+  let memoryStore = {};
 
-function initCustomerView(){
-  makeServiceSelector("serviceGrid",
-    ()=> state.customer.service,
-    (id)=>{ state.customer.service = id; },
-    validateCustomerForm);
-
-  const dateInput = document.getElementById("dateInput");
-  const today = todayStr();
-  dateInput.min = today;
-  const maxD = new Date(); maxD.setDate(maxD.getDate()+21);
-  dateInput.max = maxD.getFullYear()+"-"+pad(maxD.getMonth()+1)+"-"+pad(maxD.getDate());
-  dateInput.value = today;
-  state.customer.date = today;
-  dateInput.onchange = async ()=>{
-    state.customer.date = dateInput.value;
-    state.customer.time = null;
-    validateCustomerForm();
-    await loadCustomerSlots();
-  };
-
-  document.getElementById("custName").oninput = validateCustomerForm;
-  document.getElementById("custPhone").oninput = validateCustomerForm;
-
-  document.getElementById("submitBtn").onclick = submitBooking;
-  document.getElementById("newBookingBtn").onclick = resetBookingForm;
-
-  loadCustomerSlots();
-}
-
-async function loadCustomerSlots(){
-  const container = document.getElementById("slotGrid");
-  await renderSlotGrid(container, state.customer.date, state.customer.time, async (t)=>{
-    state.customer.time = t;
-    await loadCustomerSlots();
-    validateCustomerForm();
-  });
-}
-
-async function submitBooking(){
-  const btn = document.getElementById("submitBtn");
-  btn.disabled = true;
-  btn.textContent = "Kaydediliyor...";
-
-  const name = document.getElementById("custName").value.trim();
-  const phone = document.getElementById("custPhone").value.trim();
-
-  const list = await loadAppointments();
-  const conflict = list.some(a=>a.date===state.customer.date && a.time===state.customer.time && a.status!=="iptal");
-  if(conflict){
-    alert("Bu saat az önce başkası tarafından alındı. Lütfen başka bir saat seçin.");
-    btn.textContent = "Randevu Oluştur";
-    await loadCustomerSlots();
-    validateCustomerForm();
-    return;
-  }
-
-  const appt = {
-    id: newId(),
-    name, phone,
-    service: state.customer.service,
-    date: state.customer.date,
-    time: state.customer.time,
-    status: "bekliyor",
-    addedBy: "musteri",
-    createdAt: Date.now()
-  };
-  list.push(appt);
-  await saveAppointments(list);
-
-  document.getElementById("summaryBox").innerHTML = `
-    <div class="summary-row"><span class="k">Ad Soyad</span><span>${name}</span></div>
-    <div class="summary-row"><span class="k">Telefon</span><span>${phone}</span></div>
-    <div class="summary-row"><span class="k">Hizmet</span><span>${serviceName(appt.service)}</span></div>
-    <div class="summary-row"><span class="k">Tarih</span><span>${fmtDate(appt.date)}</span></div>
-    <div class="summary-row"><span class="k">Saat</span><span>${appt.time}</span></div>
-  `;
-  document.getElementById("bookingForm").classList.add("hidden");
-  document.getElementById("successView").classList.remove("hidden");
-  btn.textContent = "Randevu Oluştur";
-}
-
-function resetBookingForm(){
-  state.customer = { service:null, date: todayStr(), time:null };
-  document.getElementById("custName").value = "";
-  document.getElementById("custPhone").value = "";
-  document.getElementById("dateInput").value = todayStr();
-  document.getElementById("successView").classList.add("hidden");
-  document.getElementById("bookingForm").classList.remove("hidden");
-  initCustomerView();
-}
-
-// ---------- BARBER VIEW ----------
-
-function switchTab(tab){
-  const isCustomer = tab==="customer";
-  document.getElementById("tabCustomer").classList.toggle("active", isCustomer);
-  document.getElementById("tabBarber").classList.toggle("active", !isCustomer);
-  document.getElementById("viewCustomer").classList.toggle("hidden", !isCustomer);
-  document.getElementById("viewBarber").classList.toggle("hidden", isCustomer);
-}
-
-document.getElementById("tabCustomer").onclick = ()=> switchTab("customer");
-document.getElementById("tabBarber").onclick = ()=> switchTab("barber");
-
-document.getElementById("pinSubmit").onclick = ()=>{
-  const val = document.getElementById("pinInput").value.trim();
-  if(val === BARBER_PIN){
-    state.authed = true;
-    document.getElementById("pinGate").classList.add("hidden");
-    document.getElementById("barberPanel").classList.remove("hidden");
-    initBarberView();
-  }else{
-    alert("PIN hatalı.");
-  }
-};
-document.getElementById("pinInput").onkeydown = (e)=>{
-  if(e.key === "Enter") document.getElementById("pinSubmit").click();
-};
-
-let barberPollTimer = null;
-
-function initBarberView(){
-  state.barberDate = todayStr();
-  document.getElementById("barberDate").value = state.barberDate;
-  document.getElementById("barberDate").onchange = (e)=>{
-    state.barberDate = e.target.value;
-    refreshBarberList();
-    refreshQuickAddSlots();
-  };
-  document.getElementById("prevDay").onclick = ()=> shiftBarberDate(-1);
-  document.getElementById("nextDay").onclick = ()=> shiftBarberDate(1);
-  document.getElementById("refreshBtn").onclick = refreshBarberList;
-
-  document.getElementById("quickAddToggle").onclick = ()=>{
-    const body = document.getElementById("quickAddBody");
-    body.classList.toggle("hidden");
-    document.getElementById("quickAddArrow").textContent = body.classList.contains("hidden") ? "▾" : "▴";
-  };
-
-  makeServiceSelector("qaServiceGrid",
-    ()=> state.quickAdd.service,
-    (id)=>{ state.quickAdd.service = id; },
-    validateQuickAdd);
-  document.getElementById("qaName").oninput = validateQuickAdd;
-  document.getElementById("qaPhone").oninput = validateQuickAdd;
-  document.getElementById("qaSubmit").onclick = submitQuickAdd;
-
-  refreshBarberList();
-  refreshQuickAddSlots();
-
-  if(barberPollTimer) clearInterval(barberPollTimer);
-  barberPollTimer = setInterval(()=>{
-    if(!document.getElementById("viewBarber").classList.contains("hidden") && state.authed){
-      refreshBarberList();
-    }
-  }, 8000);
-}
-
-function shiftBarberDate(delta){
-  const d = new Date(state.barberDate+"T00:00:00");
-  d.setDate(d.getDate()+delta);
-  state.barberDate = d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-  document.getElementById("barberDate").value = state.barberDate;
-  refreshBarberList();
-  refreshQuickAddSlots();
-}
-
-async function refreshQuickAddSlots(){
-  await renderSlotGrid(document.getElementById("qaSlotGrid"), state.barberDate, state.quickAdd.time, async (t)=>{
-    state.quickAdd.time = t;
-    await refreshQuickAddSlots();
-    validateQuickAdd();
-  });
-}
-
-function validateQuickAdd(){
-  const name = document.getElementById("qaName").value.trim();
-  const ok = state.quickAdd.service && state.quickAdd.time && name.length>1;
-  document.getElementById("qaSubmit").disabled = !ok;
-}
-
-async function submitQuickAdd(){
-  const name = document.getElementById("qaName").value.trim();
-  const phone = document.getElementById("qaPhone").value.trim();
-  const list = await loadAppointments();
-  const conflict = list.some(a=>a.date===state.barberDate && a.time===state.quickAdd.time && a.status!=="iptal");
-  if(conflict){
-    alert("Bu saat dolu.");
-    return;
-  }
-  list.push({
-    id: newId(),
-    name, phone: phone || "-",
-    service: state.quickAdd.service,
-    date: state.barberDate,
-    time: state.quickAdd.time,
-    status: "bekliyor",
-    addedBy: "berber",
-    createdAt: Date.now()
-  });
-  await saveAppointments(list);
-  document.getElementById("qaName").value = "";
-  document.getElementById("qaPhone").value = "";
-  state.quickAdd = {service:null, time:null};
-  makeServiceSelector("qaServiceGrid",
-    ()=> state.quickAdd.service,
-    (id)=>{ state.quickAdd.service = id; },
-    validateQuickAdd);
-  document.getElementById("qaSubmit").disabled = true;
-  await refreshQuickAddSlots();
-  await refreshBarberList();
-}
-
-async function setStatus(id, status){
-  const list = await loadAppointments();
-  const item = list.find(a=>a.id===id);
-  if(item){
-    item.status = status;
-    await saveAppointments(list);
-    await refreshBarberList();
-    await refreshQuickAddSlots();
-  }
-}
-
-async function refreshBarberList(){
-  const list = await loadAppointments();
-  const dayList = list
-    .filter(a=>a.date===state.barberDate)
-    .sort((a,b)=> timeToMinutes(a.time) - timeToMinutes(b.time));
-
-  const container = document.getElementById("apptList");
-  container.innerHTML = "";
-  if(dayList.length===0){
-    container.innerHTML = "<div class='empty-list'>Bu tarih için randevu yok.</div>";
-  }else{
-    dayList.forEach(a=>{
-      const row = document.createElement("div");
-      row.className = "appt-row";
-      row.innerHTML = `
-        <div class="appt-time">${a.time}</div>
-        <div class="appt-info">
-          <div class="appt-name">${a.name}</div>
-          <div class="appt-meta">${serviceName(a.service)} · ${a.phone || "-"} <span class="badge ${a.status==='tamamlandı'?'tamamlandi':a.status}">${a.status}</span></div>
-        </div>
-        <div class="appt-actions"></div>
-      `;
-      const actions = row.querySelector(".appt-actions");
-      if(a.status === "bekliyor"){
-        const doneBtn = document.createElement("button");
-        doneBtn.className = "icon-btn";
-        doneBtn.textContent = "✓";
-        doneBtn.title = "Tamamlandı olarak işaretle";
-        doneBtn.onclick = ()=> setStatus(a.id, "tamamlandı");
-        const cancelBtn = document.createElement("button");
-        cancelBtn.className = "icon-btn";
-        cancelBtn.textContent = "✕";
-        cancelBtn.title = "İptal et";
-        cancelBtn.onclick = ()=> setStatus(a.id, "iptal");
-        actions.appendChild(doneBtn);
-        actions.appendChild(cancelBtn);
-      }else{
-        const undoBtn = document.createElement("button");
-        undoBtn.className = "icon-btn";
-        undoBtn.textContent = "↺";
-        undoBtn.title = "Bekliyor durumuna al";
-        undoBtn.onclick = ()=> setStatus(a.id, "bekliyor");
-        actions.appendChild(undoBtn);
+  async function storageSet(key, value){
+    try{
+      if(window.storage && typeof window.storage.set === 'function'){
+        const res = await window.storage.set(key, value);
+        if(res){ return true; }
       }
-      container.appendChild(row);
-    });
+    }catch(e){ console.warn('window.storage.set başarısız, yedek yönteme geçiliyor:', e); }
+    try{
+      localStorage.setItem(key, value);
+      return true;
+    }catch(e){ console.warn('localStorage başarısız, hafızada tutulacak:', e); }
+    memoryStore[key] = value;
+    return true;
   }
 
-  updateStatusBanner(list);
-  const d = new Date();
-  document.getElementById("lastUpdated").textContent = "Son güncelleme: " + pad(d.getHours())+":"+pad(d.getMinutes())+":"+pad(d.getSeconds());
-}
+  async function storageGet(key){
+    try{
+      if(window.storage && typeof window.storage.get === 'function'){
+        const res = await window.storage.get(key);
+        if(res && res.value !== undefined && res.value !== null){ return res.value; }
+      }
+    }catch(e){ /* anahtar yok ya da API kullanılamıyor, sıradaki yönteme geç */ }
+    try{
+      const v = localStorage.getItem(key);
+      if(v !== null){ return v; }
+    }catch(e){ /* localStorage kullanılamıyor */ }
+    return memoryStore[key] !== undefined ? memoryStore[key] : null;
+  }
 
-function updateStatusBanner(list){
-  const today = todayStr();
-  const nm = nowMinutes();
-  const todays = list.filter(a=>a.date===today && a.status==="bekliyor")
-    .sort((a,b)=> timeToMinutes(a.time)-timeToMinutes(b.time));
-
-  let current = null, next = null;
-  for(const a of todays){
-    const start = timeToMinutes(a.time);
-    const end = start + serviceDur(a.service);
-    if(nm >= start && nm < end){
-      current = a;
-    }else if(start > nm && !next){
-      next = a;
+  async function loadLocalListings(){
+    try{
+      const raw = await storageGet(STORAGE_KEY);
+      listings = raw ? JSON.parse(raw) : [];
+    }catch(e){
+      console.error('Yükleme hatası:', e);
+      listings = [];
+    }
+    renderAll();
+    refreshActiveSearch();
+  }
+  async function saveLocalListings(){
+    try{
+      const ok = await storageSet(STORAGE_KEY, JSON.stringify(listings));
+      if(!ok){ showToast('Kayıt bu oturumda geçici olarak tutuluyor.'); }
+    }catch(e){
+      console.error('Kaydetme hatası:', e);
+      showToast('Kayıt bu oturumda geçici olarak tutuluyor.');
     }
   }
 
-  const nowVal = document.getElementById("nowVal");
-  const nowSub = document.getElementById("nowSub");
-  if(current){
-    nowVal.textContent = current.name;
-    nowSub.textContent = serviceName(current.service) + " · " + current.time;
-  }else{
-    nowVal.textContent = "Müsait";
-    nowSub.textContent = "Şu an randevu yok";
+  function loadListings(){
+    if(useCloud){
+      db.ref('listings').on('value',
+        snap=>{
+          const val = snap.val() || {};
+          listings = Object.keys(val).map(id=>({id, ...val[id]}))
+            .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+          renderAll();
+          refreshActiveSearch();
+        },
+        err=>{
+          console.error('Bulut dinleme hatası:', err);
+          showToast('Buluta bağlanılamadı, yerel veriler kullanılıyor.');
+          loadLocalListings();
+        }
+      );
+    }else{
+      loadLocalListings();
+    }
   }
 
-  const nextVal = document.getElementById("nextVal");
-  const nextSub = document.getElementById("nextSub");
-  if(next){
-    nextVal.textContent = next.time;
-    nextSub.textContent = next.name + " · " + serviceName(next.service);
-  }else{
-    nextVal.textContent = "—";
-    nextSub.textContent = "Bugün için randevu kalmadı";
+  async function persistListing(data, isEdit){
+    if(useCloud){
+      try{
+        const id = data.id;
+        const payload = {...data};
+        delete payload.id;
+        if(isEdit){
+          await db.ref('listings/'+id).update(payload);
+        }else{
+          payload.createdAt = Date.now();
+          await db.ref('listings').push(payload);
+        }
+        return; // 'value' dinleyicisi listeyi otomatik güncelleyecek
+      }catch(e){
+        console.error('Bulut kayıt hatası:', e);
+        showToast('Bulut kaydı başarısız, yerelde tutuluyor.');
+      }
+    }
+    if(isEdit){
+      const idx = listings.findIndex(l=>l.id===data.id);
+      if(idx>-1) listings[idx]=data;
+    }else{
+      listings.push(data);
+    }
+    await saveLocalListings();
+    renderAll();
   }
-}
 
-initCustomerView();
+  async function removeListing(id){
+    if(useCloud){
+      try{
+        await db.ref('listings/'+id).remove();
+        return;
+      }catch(e){
+        console.error('Bulut silme hatası:', e);
+        showToast('Bulut silme başarısız.');
+      }
+    }
+    listings = listings.filter(x=>x.id!==id);
+    await saveLocalListings();
+    renderAll();
+  }
+
+  // ---------- Yardımcılar ----------
+  function normalize(str){
+    return (str||'').toLocaleLowerCase('tr-TR')
+      .replace(/ı/g,'i').replace(/İ/g,'i')
+      .replace(/ş/g,'s').replace(/ğ/g,'g')
+      .replace(/ü/g,'u').replace(/ö/g,'o').replace(/ç/g,'c')
+      .trim();
+  }
+  const STOPWORDS = new Set(['bana','olan','var','mi','mı','mu','mü','bul','goster','göster','gösterir','ne','nedir','portfoyde','portföyde','portfoydeki','hangi','icin','için','ver','soyle','söyle','bir','tane','misin','musun','lütfen','lutfen','ara','arasana','listele','de','da']);
+  function tokenize(str){
+    return normalize(str).split(/[^a-z0-9+]+/).filter(t=>t.length>1 && !STOPWORDS.has(t));
+  }
+  function formatPrice(p){
+    if(p===undefined || p===null || p==='') return 'Fiyat belirtilmedi';
+    const n = Number(p);
+    if(isNaN(n)) return p;
+    return n.toLocaleString('tr-TR') + ' TL';
+  }
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 2200);
+  }
+
+  // ---------- Arama ----------
+  function searchListings(query){
+    const tokens = tokenize(query);
+    if(tokens.length===0) return [];
+    const scored = listings.map(l=>{
+      const hay = normalize([l.title,l.location,l.rooms,l.area+' m2',formatPrice(l.price),(l.features||[]).join(' ')].join(' '));
+      let score = 0;
+      tokens.forEach(tok=>{ if(hay.includes(tok)) score++; });
+      return {listing:l, score};
+    }).filter(x=>x.score>0);
+    scored.sort((a,b)=>b.score-a.score);
+    return scored.slice(0,15).map(x=>x.listing);
+  }
+
+  function tagCardHTML(l, withActions){
+    const features = (l.features||[]).map(f=>`<span class="chip">${escapeHtml(f)}</span>`).join('');
+    const linkBtn = l.link ? `<a class="btn-link" href="${escapeAttr(l.link)}" target="_blank" rel="noopener">İlanı Aç</a>` : '';
+    const actions = withActions ? `
+      <div class="tag-actions">
+        ${linkBtn}
+        <button class="btn-edit" data-edit="${l.id}">Düzenle</button>
+        <button class="btn-delete" data-delete="${l.id}">Sil</button>
+      </div>` : (linkBtn ? `<div class="tag-actions">${linkBtn}</div>` : '');
+    return `
+    <div class="tag-card">
+      <div class="tag-hole"></div>
+      <div class="tag-top">
+        <div class="tag-title">${escapeHtml(l.title || 'İsimsiz İlan')}</div>
+        <div class="tag-price">${formatPrice(l.price)}</div>
+      </div>
+      <div class="tag-location">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        ${escapeHtml(l.location || 'Konum belirtilmedi')}
+      </div>
+      <div class="tag-meta">
+        <span>${escapeHtml(l.rooms||'-')}</span>
+        <span>${l.area ? l.area+' m²' : ''}</span>
+      </div>
+      <div class="tag-features">${features}</div>
+      ${actions}
+    </div>`;
+  }
+  function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+  function escapeAttr(s){ return (s||'').replace(/"/g,'&quot;'); }
+
+  let lastSearchQuery = '';
+  function refreshActiveSearch(){
+    if(lastSearchQuery){
+      renderResults(searchListings(lastSearchQuery), lastSearchQuery);
+    }
+  }
+
+  function renderResults(items, query){
+    lastSearchQuery = query || '';
+    const label = document.getElementById('resultsLabel');
+    const box = document.getElementById('results');
+    if(!query){
+      label.style.display='none'; box.innerHTML=''; return;
+    }
+    label.style.display='block';
+    label.textContent = items.length ? `${items.length} eşleşme bulundu` : 'Eşleşme bulunamadı';
+    box.innerHTML = items.length ? items.map(l=>tagCardHTML(l,false)).join('') :
+      `<div class="empty">"${escapeHtml(query)}" için portföyünde eşleşme yok.<br>Farklı bir ifadeyle tekrar deneyin.</div>`;
+  }
+
+  function renderAll(){
+    const box = document.getElementById('allListings');
+    const label = document.getElementById('resultsLabelAll');
+    label.textContent = listings.length ? `${listings.length} kayıtlı portföy` : '';
+    box.innerHTML = listings.length ?
+      listings.slice().reverse().map(l=>tagCardHTML(l,true)).join('') :
+      `<div class="empty">Henüz portföy eklenmedi.<br>"Portföy Ekle" sekmesinden başlayabilirsiniz.</div>`;
+  }
+
+  // ---------- Sekmeler ----------
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('view-'+btn.dataset.view).classList.add('active');
+    });
+  });
+
+  // ---------- Form ----------
+  const form = document.getElementById('listingForm');
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const data = {
+      id: editingId || Date.now().toString(36),
+      title: document.getElementById('f-title').value.trim(),
+      price: document.getElementById('f-price').value,
+      rooms: document.getElementById('f-rooms').value.trim(),
+      area: document.getElementById('f-area').value,
+      location: document.getElementById('f-location').value.trim(),
+      features: document.getElementById('f-features').value.split(',').map(s=>s.trim()).filter(Boolean),
+      link: document.getElementById('f-link').value.trim()
+    };
+    const hasAnyValue = data.title || data.price || data.rooms || data.area || data.location || data.features.length || data.link;
+    if(!hasAnyValue){
+      showToast('En az bir bilgi girin');
+      return;
+    }
+    const isEdit = !!editingId;
+    await persistListing(data, isEdit);
+    showToast(isEdit ? 'Portföy güncellendi' : 'Portföye eklendi');
+    resetForm();
+  });
+
+  document.getElementById('cancelEdit').addEventListener('click', resetForm);
+
+  function resetForm(){
+    form.reset();
+    editingId = null;
+    document.getElementById('submitBtn').textContent = 'Portföye Ekle';
+    document.getElementById('cancelEdit').style.display = 'none';
+  }
+
+  document.getElementById('allListings').addEventListener('click', async (e)=>{
+    const editId = e.target.dataset.edit;
+    const delId = e.target.dataset.delete;
+    if(editId){
+      const l = listings.find(x=>x.id===editId);
+      if(!l) return;
+      document.getElementById('f-title').value = l.title||'';
+      document.getElementById('f-price').value = l.price||'';
+      document.getElementById('f-rooms').value = l.rooms||'';
+      document.getElementById('f-area').value = l.area||'';
+      document.getElementById('f-location').value = l.location||'';
+      document.getElementById('f-features').value = (l.features||[]).join(', ');
+      document.getElementById('f-link').value = l.link||'';
+      editingId = editId;
+      document.getElementById('submitBtn').textContent = 'Değişiklikleri Kaydet';
+      document.getElementById('cancelEdit').style.display = 'block';
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+      document.querySelector('.tab-btn[data-view="add"]').classList.add('active');
+      document.getElementById('view-add').classList.add('active');
+    }
+    if(delId){
+      await removeListing(delId);
+      showToast('Portföy silindi');
+    }
+  });
+
+  // ---------- Metinle arama ----------
+  document.getElementById('textSearchBtn').addEventListener('click', ()=>{
+    const q = document.getElementById('textSearch').value.trim();
+    if(!q) return;
+    renderResults(searchListings(q), q);
+  });
+  document.getElementById('textSearch').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){ document.getElementById('textSearchBtn').click(); }
+  });
+
+  // ---------- Sesli arama ----------
+  const micBtn = document.getElementById('micWrap');
+  const micButton = document.getElementById('micBtn');
+  const transcriptEl = document.getElementById('transcript');
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognizing = false;
+  let recognition = null;
+
+  if(!SpeechRecognition){
+    const warn = document.getElementById('voiceWarn');
+    warn.style.display = 'block';
+    warn.textContent = 'Bu tarayıcı sesli aramayı desteklemiyor. Aşağıdaki kutuya yazarak arayabilirsiniz (Chrome tarayıcısını deneyin).';
+    micButton.disabled = true;
+    micButton.style.opacity = '0.4';
+    micButton.style.cursor = 'not-allowed';
+  }else{
+    recognition = new SpeechRecognition();
+    recognition.lang = 'tr-TR';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+
+    recognition.onstart = ()=>{
+      recognizing = true;
+      micBtn.classList.add('listening');
+      micButton.classList.add('listening');
+      transcriptEl.textContent = 'Dinliyorum...';
+      transcriptEl.classList.remove('has-text');
+    };
+    recognition.onresult = (e)=>{
+      let text = '';
+      for(let i=0;i<e.results.length;i++){ text += e.results[i][0].transcript; }
+      transcriptEl.textContent = text;
+      transcriptEl.classList.add('has-text');
+      if(e.results[e.results.length-1].isFinal){
+        renderResults(searchListings(text), text);
+      }
+    };
+    recognition.onerror = (e)=>{
+      const warn = document.getElementById('voiceWarn');
+      warn.style.display = 'block';
+      if(e.error === 'not-allowed' || e.error === 'permission-denied'){
+        warn.textContent = 'Mikrofon izni verilmedi. Tarayıcı ayarlarından izin verip tekrar deneyin, ya da yazarak arayın.';
+      }else{
+        warn.textContent = 'Sesli arama bir sorunla karşılaştı. Yazarak aramayı deneyebilirsiniz.';
+      }
+    };
+    recognition.onend = ()=>{
+      recognizing = false;
+      micBtn.classList.remove('listening');
+      micButton.classList.remove('listening');
+      if(transcriptEl.textContent === 'Dinliyorum...'){
+        transcriptEl.textContent = 'Mikrofona dokunup portföyü tarif edin';
+        transcriptEl.classList.remove('has-text');
+      }
+    };
+
+    micButton.addEventListener('click', ()=>{
+      if(recognizing){ recognition.stop(); return; }
+      document.getElementById('voiceWarn').style.display = 'none';
+      try{ recognition.start(); }
+      catch(err){ /* zaten çalışıyor olabilir */ }
+    });
+  }
+
+  loadListings();
+})();
 </script>
-
 </body>
 </html>
