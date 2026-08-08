@@ -163,7 +163,7 @@
     color:var(--muted);
     margin:14px 0 6px;
   }
-  input[type=text], input[type=tel], input[type=date]{
+  input[type=text], input[type=tel], input[type=date], select{
     width:100%;
     background:var(--panel-2);
     border:1px solid var(--line);
@@ -173,7 +173,8 @@
     font-size:15px;
     font-family:'Inter',sans-serif;
   }
-  input:focus{outline:none;border-color:var(--gold);}
+  select{appearance:none;-webkit-appearance:none;cursor:pointer;}
+  input:focus, select:focus{outline:none;border-color:var(--gold);}
   input::placeholder{color:#6B6255;}
 
   .slot-grid{
@@ -292,6 +293,21 @@
 
   .empty-list{text-align:center;color:var(--muted);padding:30px 0;font-size:14px;}
 
+  .chip-row{display:flex;justify-content:space-between;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin-bottom:6px;font-size:13px;}
+  .day-closed-badge{
+    display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;
+    padding:3px 9px;border-radius:20px;font-weight:700;
+    background:rgba(156,43,43,0.2);color:var(--red-light);margin-left:8px;
+  }
+  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px;}
+  .summary-box{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:10px;
+    padding:10px 6px;text-align:center;
+  }
+  .summary-box .n{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold-light);line-height:1;}
+  .summary-box .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;}
+
   .toggle-add{
     display:flex;align-items:center;justify-content:space-between;
     cursor:pointer;
@@ -302,6 +318,34 @@
   }
 
   .hidden{display:none !important;}
+
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(10,8,6,0.72);
+    display:flex; align-items:center; justify-content:center;
+    padding:16px; z-index:100;
+  }
+  .modal-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:22px;
+    width:100%; max-width:400px;
+    max-height:90vh; overflow-y:auto;
+    animation:modal-up .18s ease;
+  }
+  @keyframes modal-up{
+    from{ transform:translateY(16px); opacity:0; }
+    to{ transform:translateY(0); opacity:1; }
+  }
+  .modal-header{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--line);
+  }
+  .modal-date{ color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:1px; }
+  .modal-time{
+    font-family:'Bebas Neue',sans-serif; font-size:32px; color:var(--gold-light); line-height:1.1; margin-top:2px;
+  }
 </style>
 </head>
 <body>
@@ -324,25 +368,12 @@
 
     <div id="bookingForm">
       <div class="card">
-        <p class="section-title"><span class="num">1</span>Hizmet Seç</p>
-        <div class="service-grid" id="serviceGrid"></div>
-      </div>
-
-      <div class="card">
-        <p class="section-title"><span class="num">2</span>Tarih ve Saat</p>
+        <p class="section-title">Randevu Al</p>
         <label>Tarih</label>
         <input type="date" id="dateInput">
-        <label>Müsait Saatler</label>
+        <label>Saat Seç</label>
         <div class="slot-grid" id="slotGrid"></div>
-      </div>
-
-      <div class="card">
-        <p class="section-title"><span class="num">3</span>Bilgileriniz</p>
-        <label>Ad Soyad</label>
-        <input type="text" id="custName" placeholder="Ahmet Yılmaz">
-        <label>Telefon</label>
-        <input type="tel" id="custPhone" placeholder="05XX XXX XX XX">
-        <button class="btn btn-primary" id="submitBtn" disabled>Randevu Oluştur</button>
+        <p class="empty-note" style="text-align:center;">Bir saate dokunarak randevunuzu tamamlayın</p>
       </div>
     </div>
 
@@ -392,8 +423,24 @@
           <button id="prevDay">‹</button>
           <input type="date" id="barberDate">
           <button id="nextDay">›</button>
+          <button class="btn-ghost" id="toggleDayClosedBtn" style="white-space:nowrap;">Günü Kapat</button>
         </div>
+        <div id="dayClosedNote" class="empty-note hidden">Bu gün kapalı — müşteriler randevu alamaz.</div>
 
+        <div class="summary-grid" id="summaryGrid"></div>
+
+        <div style="display:flex; gap:8px; margin-top:14px;">
+          <button class="btn-ghost" id="exportTxtBtn" style="flex:1;">📄 TXT İndir</button>
+          <button class="btn-ghost" id="exportPdfBtn" style="flex:1;">🧾 PDF İndir</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="section-title">Randevu Listesi</p>
+        <div id="apptList"></div>
+      </div>
+
+      <div class="card">
         <div class="toggle-add" id="quickAddToggle">
           <p class="section-title" style="margin:0;">Hızlı Randevu Ekle</p>
           <span id="quickAddArrow" style="color:var(--muted);">▾</span>
@@ -413,8 +460,39 @@
       </div>
 
       <div class="card">
-        <p class="section-title">Randevu Listesi</p>
-        <div id="apptList"></div>
+        <div class="toggle-add" id="settingsToggle">
+          <p class="section-title" style="margin:0;">Çalışma Saatleri ve Ayarlar</p>
+          <span id="settingsArrow" style="color:var(--muted);">▾</span>
+        </div>
+
+        <div id="settingsBody" class="hidden" style="margin-top:12px;">
+          <div class="settings-grid">
+            <div>
+              <label>Açılış Saati</label>
+              <select id="openHourSelect"></select>
+            </div>
+            <div>
+              <label>Kapanış Saati</label>
+              <select id="closeHourSelect"></select>
+            </div>
+          </div>
+          <label>Randevu Aralığı</label>
+          <select id="slotMinutesSelect">
+            <option value="15">15 dakika</option>
+            <option value="20">20 dakika</option>
+            <option value="30">30 dakika</option>
+            <option value="45">45 dakika</option>
+            <option value="60">60 dakika</option>
+          </select>
+          <button class="btn btn-secondary" id="saveSettingsBtn">Ayarları Kaydet</button>
+
+          <label style="margin-top:22px;">Kapalı Günler</label>
+          <div style="display:flex;gap:8px;">
+            <input type="date" id="closeDayInput">
+            <button class="btn-ghost" id="addCloseDayBtn" style="white-space:nowrap;">Ekle</button>
+          </div>
+          <div id="closedDaysList" style="margin-top:10px;"></div>
+        </div>
       </div>
 
     </div>
@@ -422,12 +500,41 @@
 
 </div>
 
+<div id="bookingModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <div class="modal-date" id="modalDateLabel"></div>
+        <div class="modal-time" id="modalTimeLabel"></div>
+      </div>
+      <button class="icon-btn" id="modalClose">✕</button>
+    </div>
+
+    <label>Yapılacak İşlem</label>
+    <select id="modalServiceSelect"></select>
+
+    <label>Ad Soyad</label>
+    <input type="text" id="modalName" placeholder="Ahmet Yılmaz">
+
+    <label>Telefon</label>
+    <input type="tel" id="modalPhone" placeholder="05XX XXX XX XX">
+
+    <button class="btn btn-primary" id="modalSubmit" disabled>Randevu Al</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
-const OPEN_HOUR = 9;
-const CLOSE_HOUR = 20;
-const SLOT_MINUTES = 30;
-const BARBER_PIN = "4545";
 const STORAGE_KEY = "appointments";
+const SETTINGS_KEY = "settings";
+const BARBER_PIN = "4545";
+
+let SETTINGS = {
+  openHour: 9,
+  closeHour: 20,
+  slotMinutes: 30,
+  closedDates: []
+};
 
 const SERVICES = [
   {id:"sac", name:"Saç Kesimi", dur:30, icon:"✂️"},
@@ -443,6 +550,26 @@ let state = {
   barberDate: null,
   authed: false
 };
+
+async function loadSettings(){
+  try{
+    const res = await window.storage.get(SETTINGS_KEY, true);
+    if(res && res.value){
+      const parsed = JSON.parse(res.value);
+      SETTINGS = Object.assign({}, SETTINGS, parsed);
+      if(!Array.isArray(SETTINGS.closedDates)) SETTINGS.closedDates = [];
+    }
+  }catch(e){
+    // no settings saved yet, defaults stay
+  }
+}
+async function saveSettings(){
+  try{
+    await window.storage.set(SETTINGS_KEY, JSON.stringify(SETTINGS), true);
+  }catch(e){
+    console.error("Ayarlar kaydedilemedi", e);
+  }
+}
 
 function pad(n){ return n.toString().padStart(2,"0"); }
 function todayStr(){
@@ -471,8 +598,9 @@ function fmtDate(dateStr){
 }
 
 function generateSlots(dateStr){
+  if(SETTINGS.closedDates.includes(dateStr)) return [];
   const slots = [];
-  for(let m = OPEN_HOUR*60; m < CLOSE_HOUR*60; m += SLOT_MINUTES){
+  for(let m = SETTINGS.openHour*60; m < SETTINGS.closeHour*60; m += SETTINGS.slotMinutes){
     slots.push(pad(Math.floor(m/60))+":"+pad(m%60));
   }
   if(dateStr === todayStr()){
@@ -531,7 +659,8 @@ async function renderSlotGrid(container, dateStr, selectedTime, onSelect){
   const slots = generateSlots(dateStr);
   container.innerHTML = "";
   if(slots.length===0){
-    container.innerHTML = "<div class='empty-note'>Bu tarih için müsait saat yok.</div>";
+    const msg = SETTINGS.closedDates.includes(dateStr) ? "Bu gün berber kapalı." : "Bu tarih için müsait saat yok.";
+    container.innerHTML = `<div class='empty-note'>${msg}</div>`;
     return;
   }
   slots.forEach(t=>{
@@ -548,19 +677,24 @@ async function renderSlotGrid(container, dateStr, selectedTime, onSelect){
   });
 }
 
-function validateCustomerForm(){
-  const name = document.getElementById("custName").value.trim();
-  const phone = document.getElementById("custPhone").value.trim();
-  const ok = state.customer.service && state.customer.date && state.customer.time && name.length>1 && phone.length>=7;
-  document.getElementById("submitBtn").disabled = !ok;
+function populateServiceSelect(selectEl, onChange){
+  selectEl.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Hizmet seçin...";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  selectEl.appendChild(placeholder);
+  SERVICES.forEach(s=>{
+    const opt = document.createElement("option");
+    opt.value = s.id;
+    opt.textContent = `${s.icon} ${s.name} (${s.dur} dk)`;
+    selectEl.appendChild(opt);
+  });
+  selectEl.onchange = ()=> onChange(selectEl.value);
 }
 
 function initCustomerView(){
-  makeServiceSelector("serviceGrid",
-    ()=> state.customer.service,
-    (id)=>{ state.customer.service = id; },
-    validateCustomerForm);
-
   const dateInput = document.getElementById("dateInput");
   const today = todayStr();
   dateInput.min = today;
@@ -570,44 +704,70 @@ function initCustomerView(){
   state.customer.date = today;
   dateInput.onchange = async ()=>{
     state.customer.date = dateInput.value;
-    state.customer.time = null;
-    validateCustomerForm();
     await loadCustomerSlots();
   };
 
-  document.getElementById("custName").oninput = validateCustomerForm;
-  document.getElementById("custPhone").oninput = validateCustomerForm;
-
-  document.getElementById("submitBtn").onclick = submitBooking;
   document.getElementById("newBookingBtn").onclick = resetBookingForm;
+
+  document.getElementById("modalClose").onclick = closeBookingModal;
+  document.getElementById("bookingModal").onclick = (e)=>{
+    if(e.target.id === "bookingModal") closeBookingModal();
+  };
+  document.getElementById("modalName").oninput = validateModalForm;
+  document.getElementById("modalPhone").oninput = validateModalForm;
+  document.getElementById("modalSubmit").onclick = submitBooking;
 
   loadCustomerSlots();
 }
 
 async function loadCustomerSlots(){
   const container = document.getElementById("slotGrid");
-  await renderSlotGrid(container, state.customer.date, state.customer.time, async (t)=>{
-    state.customer.time = t;
-    await loadCustomerSlots();
-    validateCustomerForm();
+  await renderSlotGrid(container, state.customer.date, null, (t)=>{
+    openBookingModal(t);
   });
 }
 
+function openBookingModal(time){
+  state.customer.time = time;
+  state.customer.service = null;
+  document.getElementById("modalDateLabel").textContent = fmtDate(state.customer.date);
+  document.getElementById("modalTimeLabel").textContent = time;
+  document.getElementById("modalName").value = "";
+  document.getElementById("modalPhone").value = "";
+  populateServiceSelect(document.getElementById("modalServiceSelect"), (id)=>{
+    state.customer.service = id;
+    validateModalForm();
+  });
+  document.getElementById("modalSubmit").disabled = true;
+  document.getElementById("modalSubmit").textContent = "Randevu Al";
+  document.getElementById("bookingModal").classList.remove("hidden");
+}
+
+function closeBookingModal(){
+  document.getElementById("bookingModal").classList.add("hidden");
+}
+
+function validateModalForm(){
+  const name = document.getElementById("modalName").value.trim();
+  const phone = document.getElementById("modalPhone").value.trim();
+  const ok = state.customer.service && name.length>1 && phone.length>=7;
+  document.getElementById("modalSubmit").disabled = !ok;
+}
+
 async function submitBooking(){
-  const btn = document.getElementById("submitBtn");
+  const btn = document.getElementById("modalSubmit");
   btn.disabled = true;
   btn.textContent = "Kaydediliyor...";
 
-  const name = document.getElementById("custName").value.trim();
-  const phone = document.getElementById("custPhone").value.trim();
+  const name = document.getElementById("modalName").value.trim();
+  const phone = document.getElementById("modalPhone").value.trim();
 
   const list = await loadAppointments();
   const conflict = list.some(a=>a.date===state.customer.date && a.time===state.customer.time && a.status!=="iptal");
   if(conflict){
     alert("Bu saat az önce başkası tarafından alındı. Lütfen başka bir saat seçin.");
-    btn.textContent = "Randevu Oluştur";
+    closeBookingModal();
     await loadCustomerSlots();
-    validateCustomerForm();
     return;
   }
 
@@ -631,15 +791,14 @@ async function submitBooking(){
     <div class="summary-row"><span class="k">Tarih</span><span>${fmtDate(appt.date)}</span></div>
     <div class="summary-row"><span class="k">Saat</span><span>${appt.time}</span></div>
   `;
+  closeBookingModal();
   document.getElementById("bookingForm").classList.add("hidden");
   document.getElementById("successView").classList.remove("hidden");
-  btn.textContent = "Randevu Oluştur";
+  btn.textContent = "Randevu Al";
 }
 
 function resetBookingForm(){
   state.customer = { service:null, date: todayStr(), time:null };
-  document.getElementById("custName").value = "";
-  document.getElementById("custPhone").value = "";
   document.getElementById("dateInput").value = todayStr();
   document.getElementById("successView").classList.add("hidden");
   document.getElementById("bookingForm").classList.remove("hidden");
@@ -659,12 +818,13 @@ function switchTab(tab){
 document.getElementById("tabCustomer").onclick = ()=> switchTab("customer");
 document.getElementById("tabBarber").onclick = ()=> switchTab("barber");
 
-document.getElementById("pinSubmit").onclick = ()=>{
+document.getElementById("pinSubmit").onclick = async ()=>{
   const val = document.getElementById("pinInput").value.trim();
   if(val === BARBER_PIN){
     state.authed = true;
     document.getElementById("pinGate").classList.add("hidden");
     document.getElementById("barberPanel").classList.remove("hidden");
+    await loadSettings();
     initBarberView();
   }else{
     alert("PIN hatalı.");
@@ -683,15 +843,25 @@ function initBarberView(){
     state.barberDate = e.target.value;
     refreshBarberList();
     refreshQuickAddSlots();
+    updateDayClosedUI();
   };
   document.getElementById("prevDay").onclick = ()=> shiftBarberDate(-1);
   document.getElementById("nextDay").onclick = ()=> shiftBarberDate(1);
   document.getElementById("refreshBtn").onclick = refreshBarberList;
+  document.getElementById("toggleDayClosedBtn").onclick = toggleSelectedDayClosed;
+  document.getElementById("exportTxtBtn").onclick = ()=> exportSummary("txt");
+  document.getElementById("exportPdfBtn").onclick = ()=> exportSummary("pdf");
 
   document.getElementById("quickAddToggle").onclick = ()=>{
     const body = document.getElementById("quickAddBody");
     body.classList.toggle("hidden");
     document.getElementById("quickAddArrow").textContent = body.classList.contains("hidden") ? "▾" : "▴";
+  };
+
+  document.getElementById("settingsToggle").onclick = ()=>{
+    const body = document.getElementById("settingsBody");
+    body.classList.toggle("hidden");
+    document.getElementById("settingsArrow").textContent = body.classList.contains("hidden") ? "▾" : "▴";
   };
 
   makeServiceSelector("qaServiceGrid",
@@ -702,6 +872,8 @@ function initBarberView(){
   document.getElementById("qaPhone").oninput = validateQuickAdd;
   document.getElementById("qaSubmit").onclick = submitQuickAdd;
 
+  initSettingsPanel();
+  updateDayClosedUI();
   refreshBarberList();
   refreshQuickAddSlots();
 
@@ -720,6 +892,111 @@ function shiftBarberDate(delta){
   document.getElementById("barberDate").value = state.barberDate;
   refreshBarberList();
   refreshQuickAddSlots();
+  updateDayClosedUI();
+}
+
+function updateDayClosedUI(){
+  const closed = SETTINGS.closedDates.includes(state.barberDate);
+  document.getElementById("toggleDayClosedBtn").textContent = closed ? "Günü Aç" : "Günü Kapat";
+  document.getElementById("dayClosedNote").classList.toggle("hidden", !closed);
+}
+
+async function toggleSelectedDayClosed(){
+  const idx = SETTINGS.closedDates.indexOf(state.barberDate);
+  if(idx === -1){
+    SETTINGS.closedDates.push(state.barberDate);
+  }else{
+    SETTINGS.closedDates.splice(idx, 1);
+  }
+  await saveSettings();
+  updateDayClosedUI();
+  renderClosedDaysList();
+  await refreshQuickAddSlots();
+}
+
+function populateHourSelect(selectEl, selectedHour){
+  selectEl.innerHTML = "";
+  for(let h=0; h<24; h++){
+    const opt = document.createElement("option");
+    opt.value = h;
+    opt.textContent = pad(h)+":00";
+    if(h === selectedHour) opt.selected = true;
+    selectEl.appendChild(opt);
+  }
+}
+
+function initSettingsPanel(){
+  const openSel = document.getElementById("openHourSelect");
+  const closeSel = document.getElementById("closeHourSelect");
+  const slotSel = document.getElementById("slotMinutesSelect");
+
+  populateHourSelect(openSel, SETTINGS.openHour);
+  populateHourSelect(closeSel, SETTINGS.closeHour);
+  slotSel.value = String(SETTINGS.slotMinutes);
+
+  document.getElementById("saveSettingsBtn").onclick = async ()=>{
+    const newOpen = Number(openSel.value);
+    const newClose = Number(closeSel.value);
+    if(newClose <= newOpen){
+      alert("Kapanış saati açılış saatinden sonra olmalı.");
+      return;
+    }
+    SETTINGS.openHour = newOpen;
+    SETTINGS.closeHour = newClose;
+    SETTINGS.slotMinutes = Number(slotSel.value);
+    await saveSettings();
+    await refreshQuickAddSlots();
+    alert("Çalışma saatleri kaydedildi.");
+  };
+
+  const closeDayInput = document.getElementById("closeDayInput");
+  closeDayInput.min = todayStr();
+  document.getElementById("addCloseDayBtn").onclick = async ()=>{
+    const val = closeDayInput.value;
+    if(!val) return;
+    if(!SETTINGS.closedDates.includes(val)){
+      SETTINGS.closedDates.push(val);
+      SETTINGS.closedDates.sort();
+      await saveSettings();
+      renderClosedDaysList();
+      if(val === state.barberDate){
+        updateDayClosedUI();
+        await refreshQuickAddSlots();
+      }
+    }
+    closeDayInput.value = "";
+  };
+
+  renderClosedDaysList();
+}
+
+function renderClosedDaysList(){
+  const container = document.getElementById("closedDaysList");
+  container.innerHTML = "";
+  if(SETTINGS.closedDates.length === 0){
+    container.innerHTML = "<div class='empty-note'>Kapalı gün yok.</div>";
+    return;
+  }
+  SETTINGS.closedDates.forEach(dateStr=>{
+    const row = document.createElement("div");
+    row.className = "chip-row";
+    row.innerHTML = `<span>${fmtDate(dateStr)}</span>`;
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "icon-btn";
+    removeBtn.textContent = "✕";
+    removeBtn.title = "Kapalı günü kaldır";
+    removeBtn.onclick = async ()=>{
+      SETTINGS.closedDates = SETTINGS.closedDates.filter(d=>d!==dateStr);
+      await saveSettings();
+      renderClosedDaysList();
+      if(dateStr === state.barberDate){
+        updateDayClosedUI();
+        await refreshQuickAddSlots();
+      }
+    };
+    row.appendChild(removeBtn);
+    container.appendChild(row);
+  });
 }
 
 async function refreshQuickAddSlots(){
@@ -779,11 +1056,127 @@ async function setStatus(id, status){
   }
 }
 
+function downloadBlob(filename, blob){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function toAsciiTr(s){
+  if(s===null || s===undefined) return s;
+  const map = {'ç':'c','Ç':'C','ğ':'g','Ğ':'G','ı':'i','İ':'I','ö':'o','Ö':'O','ş':'s','Ş':'S','ü':'u','Ü':'U'};
+  return String(s).replace(/[çÇğĞıİöÖşŞüÜ]/g, ch => map[ch] || ch);
+}
+
+async function exportSummary(format){
+  const list = await loadAppointments();
+  const dayList = list
+    .filter(a=>a.date===state.barberDate)
+    .sort((a,b)=> timeToMinutes(a.time)-timeToMinutes(b.time));
+
+  const dateLabel = fmtDate(state.barberDate);
+  const counts = {
+    total: dayList.length,
+    bekliyor: dayList.filter(a=>a.status==="bekliyor").length,
+    tamamlandi: dayList.filter(a=>a.status==="tamamlandı").length,
+    iptal: dayList.filter(a=>a.status==="iptal").length
+  };
+
+  if(format === "txt"){
+    const lines = [];
+    lines.push("USTA BERBER — Günlük Randevu Özeti");
+    lines.push("Tarih: " + dateLabel);
+    lines.push("");
+    lines.push(`Toplam: ${counts.total}   Bekliyor: ${counts.bekliyor}   Tamamlandı: ${counts.tamamlandi}   İptal: ${counts.iptal}`);
+    lines.push("-".repeat(62));
+    if(dayList.length===0){
+      lines.push("Bu tarih için randevu yok.");
+    }else{
+      dayList.forEach(a=>{
+        lines.push(`${a.time}  ${a.name.padEnd(20)}  ${serviceName(a.service).padEnd(16)}  ${(a.phone||"-").padEnd(14)}  ${a.status}`);
+      });
+    }
+    const blob = new Blob([lines.join("\n")], {type:"text/plain;charset=utf-8"});
+    downloadBlob(`randevu-ozeti-${state.barberDate}.txt`, blob);
+    return;
+  }
+
+  // PDF export
+  if(!window.jspdf){
+    alert("PDF oluşturucu yüklenemedi. İnternet bağlantınızı kontrol edip tekrar deneyin.");
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 18;
+
+  doc.setFontSize(16);
+  doc.text("USTA BERBER", 14, y); y += 8;
+  doc.setFontSize(11);
+  doc.text("Gunluk Randevu Ozeti", 14, y); y += 6;
+  doc.text("Tarih: " + toAsciiTr(dateLabel), 14, y); y += 10;
+
+  doc.setFontSize(10);
+  doc.text(`Toplam: ${counts.total}   Bekliyor: ${counts.bekliyor}   Tamamlandi: ${counts.tamamlandi}   Iptal: ${counts.iptal}`, 14, y);
+  y += 8;
+  doc.setDrawColor(180);
+  doc.line(14, y, 196, y);
+  y += 8;
+
+  if(dayList.length===0){
+    doc.text("Bu tarih icin randevu yok.", 14, y);
+  }else{
+    doc.setFont(undefined, "bold");
+    doc.text("Saat", 14, y);
+    doc.text("Ad Soyad", 34, y);
+    doc.text("Hizmet", 94, y);
+    doc.text("Telefon", 140, y);
+    doc.text("Durum", 172, y);
+    doc.setFont(undefined, "normal");
+    y += 6;
+    doc.setDrawColor(220);
+    doc.line(14, y-4, 196, y-4);
+
+    dayList.forEach(a=>{
+      if(y > 280){ doc.addPage(); y = 20; }
+      doc.text(a.time, 14, y);
+      doc.text(toAsciiTr(a.name).slice(0,28), 34, y);
+      doc.text(toAsciiTr(serviceName(a.service)).slice(0,20), 94, y);
+      doc.text(String(a.phone || "-"), 140, y);
+      doc.text(toAsciiTr(a.status), 172, y);
+      y += 6;
+    });
+  }
+
+  doc.save(`randevu-ozeti-${state.barberDate}.pdf`);
+}
+
+function renderSummary(dayList){
+  const total = dayList.length;
+  const bekliyor = dayList.filter(a=>a.status==="bekliyor").length;
+  const tamamlandi = dayList.filter(a=>a.status==="tamamlandı").length;
+  const iptal = dayList.filter(a=>a.status==="iptal").length;
+
+  document.getElementById("summaryGrid").innerHTML = `
+    <div class="summary-box"><div class="n">${total}</div><div class="l">Toplam</div></div>
+    <div class="summary-box"><div class="n">${bekliyor}</div><div class="l">Bekliyor</div></div>
+    <div class="summary-box"><div class="n">${tamamlandi}</div><div class="l">Tamamlandı</div></div>
+    <div class="summary-box"><div class="n">${iptal}</div><div class="l">İptal</div></div>
+  `;
+}
+
 async function refreshBarberList(){
   const list = await loadAppointments();
   const dayList = list
     .filter(a=>a.date===state.barberDate)
     .sort((a,b)=> timeToMinutes(a.time) - timeToMinutes(b.time));
+
+  renderSummary(dayList);
 
   const container = document.getElementById("apptList");
   container.innerHTML = "";
@@ -870,7 +1263,10 @@ function updateStatusBanner(list){
   }
 }
 
-initCustomerView();
+(async function init(){
+  await loadSettings();
+  initCustomerView();
+})();
 </script>
 
 </body>
